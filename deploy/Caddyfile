@@ -1,0 +1,6 @@
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy veritas-api:8000 {
+		flush_interval -1   # stream Server-Sent Events immediately
+	}
+}

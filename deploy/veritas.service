@@ -1,0 +1,17 @@
+# Alternative to Docker: run the API with systemd.
+#   sudo cp deploy/veritas.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now veritas
+[Unit]
+Description=Veritas research agents API
+After=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Agentic-AI-Flexi/backend
+EnvironmentFile=/home/ubuntu/Agentic-AI-Flexi/backend/.env
+ExecStart=/home/ubuntu/Agentic-AI-Flexi/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips *
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veritas agent workflow</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Courier+Prime:wght@700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #fff; }
+  #fig { width: 1000px; padding: 10px; box-sizing: border-box; }
+  text { font-family: "Hanken Grotesk", sans-serif; fill: #18243D; }
+  .t { font-size: 19px; font-weight: 700; }
+  .s { font-size: 15.5px; fill: #3b4659; }
+  .n { font-family: "Courier Prime", monospace; font-size: 17px; font-weight: 700; fill: #B8323A; }
+  .lbl { font-size: 14.5px; fill: #5B6577; }
+  .stop { font-size: 14.5px; fill: #B8323A; font-weight: 600; }
+  .legend { font-size: 14px; fill: #5B6577; }
+</style>
+</head>
+<body>
+<div id="fig">
+<svg width="980" height="1170" viewBox="0 0 980 1170" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#18243D"/></marker>
+    <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#B8323A"/></marker>
+  </defs>
+
+  <!-- legend -->
+  <rect x="10" y="8" width="26" height="18" rx="6" fill="#fff" stroke="#B8323A" stroke-width="1.8"/><text x="44" y="23" class="legend">LLM agent (Gemini)</text>
+  <rect x="210" y="8" width="26" height="18" fill="#fff" stroke="#18243D" stroke-width="1.5"/><text x="244" y="23" class="legend">deterministic code</text>
+  <rect x="400" y="8" width="26" height="18" rx="3" fill="#fff" stroke="#18243D" stroke-width="1.5" stroke-dasharray="5 3"/><text x="434" y="23" class="legend">human checkpoint</text>
+  <line x1="590" y1="17" x2="622" y2="17" stroke="#B8323A" stroke-width="1.8" marker-end="url(#r)"/><text x="630" y="23" class="legend">early exit / reflection loop</text>
+
+  <!-- Row A -->
+  <rect x="10" y="62" width="140" height="96" rx="48" fill="#F2F4F7" stroke="#18243D"/>
+  <text x="80" y="104" text-anchor="middle" class="t">Question</text>
+  <text x="80" y="126" text-anchor="middle" class="s">from the user</text>
+  <line x1="150" y1="110" x2="186" y2="110" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="188" y="60" width="226" height="100" fill="#fff" stroke="#18243D" stroke-width="1.6"/>
+  <text x="204" y="88" class="n">1</text><text x="224" y="88" class="t">Guardrail</text>
+  <text x="204" y="114" class="s">injection screening,</text><text x="204" y="136" class="s">PII redaction (code)</text>
+  <line x1="414" y1="110" x2="450" y2="110" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="300" y1="160" x2="300" y2="208" stroke="#B8323A" stroke-width="1.6" marker-end="url(#r)"/>
+  <text x="310" y="196" class="stop">blocked: stop</text>
+
+  <rect x="452" y="60" width="226" height="100" fill="#fff" stroke="#18243D" stroke-width="1.6"/>
+  <text x="468" y="88" class="n">2</text><text x="488" y="88" class="t">Memory</text>
+  <text x="468" y="114" class="s">recalls similar past</text><text x="468" y="136" class="s">runs (embeddings)</text>
+  <line x1="678" y1="110" x2="714" y2="110" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="716" y="52" width="254" height="120" rx="14" fill="#fff" stroke="#B8323A" stroke-width="2"/>
+  <text x="732" y="80" class="n">3</text><text x="752" y="80" class="t">Planner</text>
+  <text x="732" y="106" class="s">checks scope, writes</text><text x="732" y="128" class="s">sub-questions, routes</text><text x="732" y="150" class="s">each to tools (smart tier)</text>
+  <line x1="760" y1="172" x2="760" y2="226" stroke="#B8323A" stroke-width="1.6" marker-end="url(#r)"/>
+  <text x="615" y="214" class="stop">out of scope: stop</text>
+  <line x1="900" y1="172" x2="900" y2="246" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- Row B: plan review -->
+  <rect x="716" y="248" width="254" height="96" rx="4" fill="#fff" stroke="#18243D" stroke-width="1.6" stroke-dasharray="7 4"/>
+  <text x="732" y="276" class="n">4</text><text x="752" y="276" class="t">Plan review</text>
+  <text x="732" y="302" class="s">optional pause: edit,</text><text x="732" y="324" class="s">approve or reject</text>
+  <line x1="716" y1="296" x2="660" y2="296" stroke="#B8323A" stroke-width="1.6" marker-end="url(#r)"/>
+  <text x="535" y="301" class="stop">rejected: stop</text>
+
+  <!-- fan-out bus -->
+  <line x1="843" y1="344" x2="843" y2="392" stroke="#18243D" stroke-width="1.6"/>
+  <line x1="105" y1="392" x2="843" y2="392" stroke="#18243D" stroke-width="1.6"/>
+  <line x1="105" y1="392" x2="105" y2="426" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="320" y1="392" x2="320" y2="426" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="535" y1="392" x2="535" y2="426" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="110" y="383" class="lbl">parallel fan-out: one researcher per sub-question (LangGraph Send)</text>
+
+  <!-- Row C: researchers + MCP -->
+  <rect x="10" y="428" width="196" height="120" rx="14" fill="#fff" stroke="#B8323A" stroke-width="2"/>
+  <text x="24" y="456" class="n">5</text><text x="44" y="456" class="t">Researcher q1</text>
+  <text x="24" y="482" class="s">planned searches,</text><text x="24" y="504" class="s">then ReAct tool</text><text x="24" y="526" class="s">calls (fast tier)</text>
+  <rect x="222" y="428" width="196" height="120" rx="14" fill="#fff" stroke="#B8323A" stroke-width="2"/>
+  <text x="236" y="456" class="n">5</text><text x="256" y="456" class="t">Researcher q2</text>
+  <text x="236" y="482" class="s">grounded findings</text><text x="236" y="504" class="s">tied to source IDs</text><text x="236" y="526" class="s">(S1, S2, ...)</text>
+  <rect x="434" y="428" width="196" height="120" rx="14" fill="#fff" stroke="#B8323A" stroke-width="2"/>
+  <text x="448" y="456" class="n">5</text><text x="468" y="456" class="t">Researcher qN</text>
+  <text x="448" y="482" class="s">2 to 4 in total,</text><text x="448" y="504" class="s">by research depth</text>
+
+  <line x1="632" y1="488" x2="690" y2="488" stroke="#18243D" stroke-width="1.6" marker-start="url(#a)" marker-end="url(#a)"/>
+  <text x="634" y="478" class="lbl">MCP</text>
+  <rect x="692" y="412" width="278" height="166" fill="#F2F4F7" stroke="#18243D" stroke-width="1.6"/>
+  <text x="708" y="440" class="t">MCP tool server (stdio)</text>
+  <text x="708" y="466" class="s">search_openalex</text>
+  <text x="708" y="486" class="lbl">  (automatic Crossref fallback)</text>
+  <text x="708" y="508" class="s">search_arxiv</text>
+  <text x="708" y="530" class="s">search_wikipedia</text>
+  <text x="708" y="552" class="s">search_knowledge_base (RAG)</text>
+
+  <!-- join -->
+  <line x1="108" y1="548" x2="108" y2="584" stroke="#18243D" stroke-width="1.6"/>
+  <line x1="320" y1="548" x2="320" y2="584" stroke="#18243D" stroke-width="1.6"/>
+  <line x1="532" y1="548" x2="532" y2="584" stroke="#18243D" stroke-width="1.6"/>
+  <line x1="108" y1="584" x2="532" y2="584" stroke="#18243D" stroke-width="1.6"/>
+  <line x1="130" y1="584" x2="130" y2="630" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="140" y="612" class="lbl">join: all findings merged into shared state</text>
+
+  <!-- Row D: writer, verifier, critic -->
+  <rect x="10" y="632" width="250" height="100" rx="14" fill="#fff" stroke="#B8323A" stroke-width="2"/>
+  <text x="26" y="660" class="n">6</text><text x="46" y="660" class="t">Writer</text>
+  <text x="26" y="686" class="s">cited brief from the</text><text x="26" y="708" class="s">findings only (smart tier)</text>
+  <line x1="260" y1="682" x2="314" y2="682" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="316" y="632" width="250" height="100" fill="#fff" stroke="#18243D" stroke-width="1.6"/>
+  <text x="332" y="660" class="n">7</text><text x="352" y="660" class="t">Verifier</text>
+  <text x="332" y="686" class="s">removes invalid IDs,</text><text x="332" y="708" class="s">measures coverage (code)</text>
+  <line x1="566" y1="682" x2="620" y2="682" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="622" y="632" width="260" height="100" rx="14" fill="#fff" stroke="#B8323A" stroke-width="2"/>
+  <text x="638" y="660" class="n">8</text><text x="658" y="660" class="t">Critic</text>
+  <text x="638" y="686" class="s">rubric scores and fixes;</text><text x="638" y="708" class="s">accept rule applied in code</text>
+
+  <!-- revise loop (below) -->
+  <path d="M752,732 L752,780 L135,780 L135,734" fill="none" stroke="#B8323A" stroke-width="1.8" marker-end="url(#r)"/>
+  <text x="170" y="806" class="stop">revise: a score below 7, a high-severity issue or citation coverage below 75%</text>
+  <text x="170" y="826" class="stop">(bounded by the maximum number of revisions)</text>
+
+  <!-- accept -> publisher -->
+  <path d="M882,682 L940,682 L940,900 L884,900" fill="none" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="890" y="672" class="lbl">accept</text>
+  <rect x="622" y="852" width="260" height="100" fill="#fff" stroke="#18243D" stroke-width="1.6"/>
+  <text x="638" y="880" class="n">9</text><text x="658" y="880" class="t">Publisher</text>
+  <text x="638" y="906" class="s">renumbers citations, builds</text><text x="638" y="928" class="s">references from metadata</text>
+  <line x1="622" y1="902" x2="568" y2="902" stroke="#18243D" stroke-width="1.6" marker-end="url(#a)"/>
+  <rect x="356" y="860" width="210" height="84" rx="42" fill="#F2F4F7" stroke="#18243D"/>
+  <text x="461" y="897" text-anchor="middle" class="t">Verified brief</text>
+  <text x="461" y="919" text-anchor="middle" class="s">+ trace + metrics</text>
+
+  <!-- cross-cutting -->
+  <rect x="10" y="984" width="960" height="176" fill="#fff" stroke="#C5D3EA" stroke-dasharray="5 3"/>
+  <text x="26" y="1012" class="t">Cross-cutting services</text>
+  <text x="26" y="1040" class="s">Gemini gateway: smart tier for planner, writer and critic; fast tier for researchers; fallback chain,</text>
+  <text x="26" y="1062" class="s">per-model cool-down, retries and response cache.</text>
+  <text x="26" y="1088" class="s">Tracer: every step, model call and tool call is stored and streamed live to the UI (SSE).</text>
+  <text x="26" y="1114" class="s">Run manager: background execution, checkpointer for interrupt/resume, cancellation, limits.</text>
+  <text x="26" y="1140" class="s">SQLite: runs, trace events, library chunks and vectors, episodic memory, caches.</text>
+</svg>
+</div>
+</body>
+</html>
