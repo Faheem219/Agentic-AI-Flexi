@@ -88,7 +88,8 @@ def create_app(deps: Deps | None = None) -> FastAPI:
 
     app = FastAPI(title="Veritas Research Agents API", version=VERSION, lifespan=lifespan)
     app.add_middleware(
-        CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=False,
+        CORSMiddleware, allow_origins=settings.cors_origin_list,
+        allow_origin_regex=settings.cors_origin_regex or None, allow_credentials=False,
         allow_methods=["*"], allow_headers=["*"],
     )
 

@@ -1,6 +1,8 @@
 // Typed client for the Veritas FastAPI backend.
 
-const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? "";
+// Backend origin, e.g. https://api.example.com. Empty = same origin (local dev uses the Vite proxy).
+// A trailing "/" or "/api" is tolerated, because every request path below already starts with /api.
+const BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? "").trim().replace(/\/+$/, "").replace(/\/api$/, "");
 
 export type RunStatus =
   | "queued" | "running" | "awaiting_approval" | "completed"

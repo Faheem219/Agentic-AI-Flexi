@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     # --- Runtime ---
     data_dir: Path = BASE_DIR / "data"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Optional regex for extra allowed origins, e.g. Vercel preview URLs: https://myapp-.*\.vercel\.app
+    cors_origin_regex: str = ""
     max_concurrent_runs: int = 2
     max_concurrent_llm_calls: int = 4
     llm_timeout_s: float = 120.0

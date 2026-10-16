@@ -54,9 +54,9 @@ function Architecture() {
         </marker>
       </defs>
       <rect x={250} y={18} width={560} height={364} rx={6} fill="#F2F4F7" stroke="#C5D3EA" strokeDasharray="4 3" />
-      <text x={262} y={38} fontFamily="Hanken Grotesk, sans-serif" fontSize={11} fill="#5B6577">Backend on a VM (Docker): FastAPI + LangGraph</text>
+      <text x={262} y={38} fontFamily="Hanken Grotesk, sans-serif" fontSize={11} fill="#5B6577">Backend on a VM behind Nginx (SSL): FastAPI + LangGraph on port 8000</text>
       {box(20, 150, 190, 92, "Web app (Vercel)", "React, live SSE trace,\nplan editor, catalogue cards")}
-      {arrow(210, 196, 268, 196, "HTTPS /api")}
+      {arrow(210, 196, 268, 196, "HTTPS (CORS)")}
       {box(270, 120, 170, 150, "FastAPI", "REST + Server-Sent Events\nrun manager, rate limit,\naccess code, CORS")}
       {box(470, 56, 320, 168, "LangGraph agent workflow", "guardrail, memory, planner,\nplan review (interrupt),\nresearchers in parallel (Send),\nwriter, verifier, critic loop,\npublisher", true)}
       {arrow(440, 160, 468, 140)}

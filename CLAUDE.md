@@ -56,11 +56,15 @@ cd backend && .venv/bin/python -m evals.run_evals                # live benchmar
 ```
 Use `zsh`-safe shell commands: `echo "----"`, not `echo ====`. Never use `rm -rf *` after `cd`.
 
-### Deployment (user's decisions)
-- Backend: the user's own VM, using Docker (`backend/Dockerfile`, `backend/docker-compose.yml`). An optional HTTPS override is in `deploy/` (Caddy). Run a single uvicorn worker.
-- Frontend: Vercel. `frontend/vercel.json` rewrites `/api/*` to `http://YOUR_VM_PUBLIC_IP:8000`, which the user must fill in.
-- No CI/CD. Test locally, then the user deploys manually. Step-by-step guide: `deploy/DEPLOY.md`.
-- The Docker image was built and smoke-tested locally on 2026-10-15 (health OK, MCP over stdio inside the container).
+### Deployment (user's decisions, 2026-10-16; the user will use only this)
+- **Backend:** on the user's VM. They `git pull`, then run `backend/run.sh` inside **tmux** on `127.0.0.1:8000`. Their existing **Nginx + SSL domain** proxies to it. `run.sh` creates the venv, installs requirements and starts a single uvicorn worker.
+  - `backend/.env` needs `GEMINI_API_KEY` and `CORS_ORIGINS=https://<project>.vercel.app`.
+  - Optional: `CORS_ORIGIN_REGEX` (preview deployments), `ACCESS_CODE`, `OPENALEX_API_KEY`.
+- **Frontend:** on Vercel with Root Directory `frontend`. Env var `VITE_API_BASE=https://<backend-domain>`, with no `/api` and no trailing slash; `api.ts` strips either if present. The value is baked in at build time, so redeploy after changing it. `vercel.json` only has the SPA fallback rewrite. The browser calls the backend directly, so CORS must include the Vercel URL.
+- **Nginx notes:** consider `client_max_body_size 20m` for PDF uploads. SSE already sends `X-Accel-Buffering: no`.
+- No CI/CD. Guide: `deploy/DEPLOY.md`.
+- Docker, Caddy and systemd files remain as unused alternatives. The Docker image was smoke-tested on 2026-10-15.
+- The cross-origin set-up was verified locally on 2026-10-16: run.sh on another port, a production build with VITE_API_BASE ending in "/api/", CORS allow/deny, SSE headers, and the Playwright UI.
 
 ### Key results (`backend/evals/results/latest.md`, 2026-10-15, 6 questions in 6 domains)
 | Measure | Veritas | Single call |

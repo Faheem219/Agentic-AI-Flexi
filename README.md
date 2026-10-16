@@ -36,7 +36,7 @@ The figures come from 6 research questions in 6 fields. See [`backend/evals/resu
 ## Architecture
 
 ```
-React (Vercel) --HTTPS /api--> FastAPI (VM, Docker) --> LangGraph agent workflow --> Gemini gateway --> Gemini API
+React (Vercel) --HTTPS--> api domain (Nginx, SSL) --> FastAPI on :8000 (VM, tmux) --> LangGraph agent workflow --> Gemini gateway --> Gemini API
                                     |                         |
                                  SQLite (WAL)            MCP client --stdio--> MCP tool server --> OpenAlex / arXiv /
                          runs, traces, library, memory                                            Wikipedia / Crossref / library
@@ -87,7 +87,10 @@ Or serve it over HTTP: `python -m app.mcp_server --http --port 8765`.
 
 ## Deploy
 
-See [`deploy/DEPLOY.md`](deploy/DEPLOY.md). In short, the backend runs in Docker on a VM (`backend/docker-compose.yml`) and the frontend runs on Vercel (`frontend/vercel.json` proxies `/api` to the VM).
+See [`deploy/DEPLOY.md`](deploy/DEPLOY.md). In short:
+
+- **Backend:** on the VM, `cp backend/.env.example backend/.env` (set `GEMINI_API_KEY` and `CORS_ORIGINS`), then run `./backend/run.sh` inside tmux. It listens on `127.0.0.1:8000` behind your Nginx + SSL domain.
+- **Frontend:** on Vercel, set Root Directory to `frontend` and set `VITE_API_BASE=https://<your-api-domain>` (no `/api`, no trailing slash).
 
 ## Project layout
 
@@ -106,6 +109,6 @@ backend/
   evals/                 benchmark dataset, runner, results
   sample_docs/           sample library document
 frontend/                React + Vite app (catalogue-card UI), vercel.json
-deploy/                  DEPLOY.md, HTTPS compose override, Caddyfile, systemd unit
+deploy/                  DEPLOY.md (tmux + Nginx + Vercel), optional Docker/Caddy/systemd alternatives
 report/                  CA3 report (.docx) and figures
 ```

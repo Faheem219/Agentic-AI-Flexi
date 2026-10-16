@@ -498,12 +498,12 @@ def build_body() -> str:
     a(field("LLM / AI Model", "Google Gemini, free tier, via the google-genai SDK. Smart tier: gemini-3-flash-preview; fast tier: gemini-3.5-flash-lite; automatic fallbacks: gemini-3.1-flash-lite, gemini-3.8-flash, gemini-flash-lite-latest; embeddings: gemini-embedding-001 (768 dimensions)"))
     a(field("Agent Framework", "LangGraph 1.2 (StateGraph, conditional edges, Send fan-out, interrupt/Command, checkpointer); Model Context Protocol Python SDK 2.3 (MCPServer and Client over stdio)"))
     a(field("Tools / APIs", "OpenAlex, arXiv, Wikipedia (MediaWiki + REST) and Crossref APIs; custom hybrid retrieval (rank-bm25, NumPy); pypdf; httpx"))
-    a(field("Database / Storage", "SQLite in WAL mode: runs, trace events, document chunks and embeddings, episodic memory, LLM and tool caches (persisted in a Docker volume in production)"))
-    a(field("Frontend", "React 19, Vite 7, TypeScript, react-markdown; live updates over Server-Sent Events with polling fallback; deployed on Vercel"))
-    a(field("Backend", "FastAPI + Uvicorn (REST + Server-Sent Events) in Docker on a Linux VM; pytest for testing"))
+    a(field("Database / Storage", "SQLite in WAL mode: runs, trace events, document chunks and embeddings, episodic memory, LLM and tool caches (a single database file on the VM)"))
+    a(field("Frontend", "React 19, Vite 7, TypeScript, react-markdown; live updates over Server-Sent Events with polling fallback; deployed on Vercel (API address set by the VITE_API_BASE environment variable)"))
+    a(field("Backend", "FastAPI + Uvicorn (REST + Server-Sent Events) on a Linux VM, served on port 8000 in a tmux session behind Nginx with an SSL certificate on my own domain; pytest for testing"))
     a(H2("System Architecture"))
-    a(figure(FIG / "fig_architecture.png", "Deployment architecture: React frontend on Vercel, FastAPI and the agent workflow on a VM, tools in a separate MCP server process.", 6.2, border=False))
-    a(P("The browser talks only to the Vercel domain, which proxies `/api/*` to the FastAPI backend on the VM. A request to start research creates a run record and executes the LangGraph workflow as a background task. Every node, model call and tool call emits a trace event that is stored in SQLite and pushed to the browser over Server-Sent Events. If a proxy buffers the stream, the UI switches to polling automatically. The agents reach their tools through an MCP client connected over stdio to the MCP tool server, which runs as a separate process."))
+    a(figure(FIG / "fig_architecture.png", "Deployment architecture: React frontend on Vercel, FastAPI and the agent workflow on a VM behind Nginx (HTTPS), tools in a separate MCP server process.", 6.2, border=False))
+    a(P("The browser loads the React app from Vercel and calls the API on the backend's own HTTPS domain, configured at build time through `VITE_API_BASE`. CORS allows only the app's origin. On the VM, Nginx terminates TLS with the domain's certificate and forwards requests to Uvicorn on port 8000, which runs in a tmux session with a single worker. A request to start research creates a run record and executes the LangGraph workflow as a background task. Every node, model call and tool call emits a trace event that is stored in SQLite and pushed to the browser over Server-Sent Events. If a proxy buffers the stream, the UI switches to polling automatically. The agents reach their tools through an MCP client connected over stdio to the MCP tool server, which runs as a separate process."))
     a(H2("Implementation Steps"))
     a(numbered([
         "**Probing the platform.** Listing the models available to the API key showed that the Gemini 2.5 models are closed to new users. The 3.x Flash and Flash-Lite models were tested for function calling, JSON-schema output and latency before any design decision was made. The MCP 2.x SDK and LangGraph 1.2 APIs were checked with small spike programs, because both had changed from earlier versions (for example FastMCP was renamed MCPServer).",
@@ -517,7 +517,7 @@ def build_body() -> str:
         "**API, run manager and observability** (`main.py`, `runs.py`, `events.py`). Background execution with a concurrency limit; pause and resume for plan approval; cancellation; trace persistence; SSE streaming with replay from the last event ID; per-client rate limiting; an optional access code to protect the free-tier quota on a public deployment.",
         "**Frontend** (`frontend/`). An Ask page; a run page with a live agent-team pipeline, activity log and metrics, plus tabs for the brief (citations open catalogue cards), sources, plan (editor during review), review rounds, follow-up chat and trace; a library page with a retrieval tester; an evaluation page; and a “How it works” page.",
         f"**Testing and evaluation** (`tests/`, `evals/`). {N_TESTS} automated tests run offline with a scripted fake LLM and fake tools. A benchmark compares Veritas with a single-call baseline and verifies every reference externally (Section 7).",
-        "**Packaging and deployment** (`Dockerfile`, `docker-compose.yml`, `deploy/`, `frontend/vercel.json`). The backend image was built and smoke-tested locally: the container starts the MCP server over stdio and passes its health check. Deployment steps are documented in `deploy/DEPLOY.md`.",
+        "**Packaging and deployment** (`backend/run.sh`, `frontend/vercel.json`, `deploy/DEPLOY.md`). On the VM, `run.sh` creates the virtual environment, installs dependencies and starts Uvicorn on port 8000 inside tmux behind the existing Nginx/SSL set-up. On Vercel only the `VITE_API_BASE` variable is needed. The cross-origin set-up (CORS allow/deny, the event stream through a proxy, the production build) was verified locally before deployment. A Docker image was also built and smoke-tested as an alternative.",
     ]))
     a(code([
         "g = StateGraph(ResearchState)",
@@ -557,7 +557,7 @@ def build_body() -> str:
     a(H1("7. Final Project Demonstration"))
     a(H2("Prototype / Application Link"))
     a(P("Web application: [[https://<project-name>.vercel.app – add after deployment]]"))
-    a(P("Backend health check: [[http://<VM-IP>:8000/api/health – add after deployment]]"))
+    a(P("Backend health check: [[https://<backend-domain>/api/health – add after deployment]]"))
     a(H2("GitHub Repository"))
     a(P("https://github.com/Faheem219/Agentic-AI-Flexi"))
     a(H2("Demonstration"))

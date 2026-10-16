@@ -1,63 +1,82 @@
 # Deploying Veritas
 
-The backend (FastAPI + agents + MCP tool server) runs on your VM in Docker. The frontend runs on Vercel. No CI/CD is needed: test locally, then deploy by hand.
+- **Backend:** runs on your VM in a tmux session on `127.0.0.1:8000`. Your existing Nginx site (with its SSL certificate) forwards your domain to it.
+- **Frontend:** runs on Vercel and calls the backend domain directly.
+
+No CI/CD is involved: test locally, then deploy by hand.
+
+```
+Browser ──HTTPS──> Vercel (React app)
+   │
+   └──HTTPS──> https://api.yourdomain.com ──Nginx (SSL)──> 127.0.0.1:8000 (uvicorn in tmux)
+```
 
 ## 1. Backend on the VM
 
-Prerequisites: Docker with the compose plugin, and an open TCP port 8000 (or 80/443 if you use the HTTPS option).
+Prerequisites: git, and Python 3.10+ (3.12 recommended). If `uv` is installed, `run.sh` uses it and fetches Python 3.12 automatically.
 
 ```bash
-git clone git@github.com:Faheem219/Agentic-AI-Flexi.git
+git clone https://github.com/Faheem219/Agentic-AI-Flexi.git     # first time; later: git pull
 cd Agentic-AI-Flexi/backend
 cp .env.example .env
-nano .env        # GEMINI_API_KEY=..., CORS_ORIGINS=https://<your-app>.vercel.app
-                 # optional: ACCESS_CODE=<code> to stop strangers spending your Gemini quota
-                 # optional: OPENALEX_API_KEY=<free key> for a 10x higher daily search budget
-docker compose up -d --build
-curl http://localhost:8000/api/health    # {"status":"ok", ... "mcp":{"mode":"mcp-stdio", ...}}
+nano .env
 ```
 
-Data (runs, traces, library documents, memory) lives in the `veritas-data` Docker volume and survives restarts and rebuilds.
+Set these in `backend/.env`:
 
-To update after a `git pull`: `docker compose up -d --build`. To see logs: `docker compose logs -f`.
+```ini
+GEMINI_API_KEY=<your Gemini key>
+CORS_ORIGINS=https://<your-project>.vercel.app      # exact Vercel URL, no trailing slash
+# optional:
+CORS_ORIGIN_REGEX=https://<your-project>-.*\.vercel\.app   # also allow Vercel preview deployments
+ACCESS_CODE=<code>          # stops strangers from spending your Gemini quota (enter it once in the UI)
+OPENALEX_API_KEY=<key>      # free key from openalex.org/settings/api: about 1,000 searches/day instead of about 100
+```
 
-The API must run as a single process (`--workers 1`, already set), because runs that are waiting for plan approval are held in memory.
-
-### Optional: HTTPS with your own domain
-
-Point a DNS A record (for example `api.example.com`) at the VM and open ports 80 and 443:
+Start it in tmux:
 
 ```bash
-cd Agentic-AI-Flexi
-DOMAIN=api.example.com docker compose -f backend/docker-compose.yml -f deploy/docker-compose.https.yml up -d --build
+tmux new -s veritas
+./run.sh                      # from Agentic-AI-Flexi/backend
+# detach with Ctrl+B then D; re-attach later with: tmux attach -t veritas
 ```
 
-Caddy obtains a Let's Encrypt certificate automatically and streams Server-Sent Events without buffering.
+`run.sh` creates `backend/.venv` on first run, installs or updates dependencies on every run, and starts uvicorn on `127.0.0.1:8000` with one worker. One worker is deliberate: runs waiting for plan approval are held in memory. Runs, traces, library documents and memory are stored in `backend/data/veritas.db`.
 
-### Without Docker (systemd)
+Check it: `curl https://api.yourdomain.com/api/health` should return `{"status":"ok", ... "mcp":{"mode":"mcp-stdio", ...}}`.
 
-```bash
-cd backend && python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
-sudo cp ../deploy/veritas.service /etc/systemd/system/   # edit User / paths first
-sudo systemctl daemon-reload && sudo systemctl enable --now veritas
+**To update later:** `git pull`, then in the tmux session press Ctrl+C and run `./run.sh` again.
+
+### Nginx notes
+
+Your existing `location / { proxy_pass http://127.0.0.1:8000; ... }` block works as it is. Two optional additions:
+
+```nginx
+client_max_body_size 20m;    # allow PDF uploads to "Your library" (the Nginx default is only 1 MB)
+proxy_read_timeout 300s;     # keep long live streams open (the app also pings every 15 s)
 ```
+
+The API already sends `X-Accel-Buffering: no` on its live event stream, so Nginx does not buffer it, and no extra SSE configuration is needed. Reload Nginx after any change with `sudo nginx -t && sudo systemctl reload nginx`.
 
 ## 2. Frontend on Vercel
 
-1. In `frontend/vercel.json`, replace `YOUR_VM_PUBLIC_IP` with the VM's public IP (or use `https://api.example.com` if you set up HTTPS). Vercel then proxies `/api/*` to the VM, so the browser only talks to the HTTPS Vercel domain and no mixed-content or CORS problems arise.
-2. Deploy from the `frontend` folder:
-   ```bash
-   cd frontend
-   npx vercel        # first time: link the project and choose "frontend" as the root
-   npx vercel --prod
+1. Import the GitHub repository in Vercel and set **Root Directory** to `frontend`. Vite is detected automatically; `frontend/vercel.json` sets the build and routing.
+2. In **Project Settings → Environment Variables**, add:
    ```
-   Or import the GitHub repo in the Vercel dashboard and set **Root Directory** to `frontend`. The framework is detected as Vite.
-3. Add the Vercel URL to `CORS_ORIGINS` in the VM's `.env` and run `docker compose up -d` again. This only matters if you call the API directly by setting `VITE_API_BASE`.
+   VITE_API_BASE = https://api.yourdomain.com
+   ```
+   Use only the domain: **no `/api` and no trailing slash**. The app adds `/api/...` itself, and a stray `/api` is ignored anyway. The value is built into the bundle, so **redeploy after changing it**.
+3. Deploy, then put the exact Vercel URL into `CORS_ORIGINS` on the VM (step 1) and restart `./run.sh`.
 
-The UI follows runs live over Server-Sent Events. If a proxy buffers the stream, it switches to polling automatically after 12 seconds, so live updates keep working through the Vercel rewrite.
+## 3. Smoke test
 
-## 3. Smoke test after deploying
+- Open the Vercel URL. The sidebar footer should say "Connected, tools over MCP (stdio)".
+- Ask "How does spaced repetition affect long-term retention?" at **Quick** depth and watch the agents work.
+- On **Your library**, upload `backend/sample_docs/agentic_ai_study_notes.md`. Then ask a question with "Your library" ticked.
+- **Evaluation** shows the benchmark from `backend/evals/results/latest.json`.
 
-- Open the Vercel URL, ask "How does spaced repetition affect long-term retention?" at Quick depth, and watch the agent team work.
-- On the Your library page, upload `backend/sample_docs/agentic_ai_study_notes.md`, then ask a question with "Your library" ticked.
-- On the Evaluation page you should see the benchmark that ships in `backend/evals/results/latest.json`.
+If the page loads but shows "Server unreachable", check three things. Is `VITE_API_BASE` exactly your backend domain (then redeploy)? Is the Vercel URL in `CORS_ORIGINS` (then restart `run.sh`)? Does `https://api.yourdomain.com/api/health` open in the browser?
+
+## Alternatives (not needed for the setup above)
+
+`backend/Dockerfile` and `backend/docker-compose.yml` run the same API in Docker. `deploy/docker-compose.https.yml` with the `Caddyfile` adds automatic HTTPS. `deploy/veritas.service` runs it under systemd instead of tmux.
