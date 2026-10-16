@@ -20,17 +20,19 @@ The other assessments are CA1 (MCQ, 10 marks) and CA2 (certificates, 20 marks).
 
 The template has no slots for Agent Workflow, Testing and Evidence, or Individual Reflection. They were added as Heading 2 subsections inside the existing numbered sections (5, 7 and 8) so the template's numbering is unchanged.
 
-## Course status
-- **Done:** "AI Agents & AI Automation – The Practical Agentic AI Guide" (Udemy, accessed through Infosys Springboard). 8 h 12 min, 91 lectures. It covers n8n workflow automation, Airtable/Gmail/PDF workflows, AI agents vs LLMs, prompting (role / constraints / tools / instructions / I-O), OpenRouter structured outputs, API integration, error handling (retries, 3 layers of failure handling), a Google Calendar agent, RAG (chunking, embeddings, retrieval, contextual retrieval, updating data) and CAG. Its certificate PDF is in the repo root.
-- Infosys Springboard's Udemy licence expired, so about 37 hours must come from elsewhere. The user wants courses whose **hours are stated on the official course page or the certificate**. The plan agreed on 2026-10-11 is about 39.5–41 hours:
-  - Claude Academy (academy.claude.com): Building with the Claude API 9h, Intro to MCP 1h, MCP Advanced 1.5h, agent skills 1h, subagents 0.75h, Claude Code in action 1h, human-agent teams 0.75h, plus optional Claude Code 101 1.5h
-  - Simplilearn SkillUp: AI Agents for Beginners 1h, Intro to Agentic AI & LLM Architectures 1h, AI Agent Frameworks 1h, LangGraph 2h, CrewAI 2h, Reflection Agents 1h, Agentic Workflows (Bedrock) 2h, n8n 3h, Reliable Agentic AI 1h
-  - IBM SkillsBuild: Make Agentic AI Work for You 4h, Intro by Design: Build an AI Agent 4h, Unleashing the Power of AI Agents 1h
-  - Databricks AI Agent Fundamentals: 1.5h, plus the accreditation quiz
-- **Pending:** the user will paste each completed course's contents and certificates. Then:
-  1. update report Section 3 (one numbered entry per course: title, provider, hours, evidence) and the cover-page duration;
-  2. enrich Section 1 (key concepts) and Section 2 (understanding) with the new course material, mapped to where Veritas uses each concept;
-  3. add certificate images to Appendix A.
+## Course status (final, 2026-10-16)
+All four courses were taken on **Infosys Springboard**, with Udemy content. Total hours used in the report: **48 h 25 min**.
+
+1. **AI Agents & AI Automation – The Practical Agentic AI Guide.** 8 h 12 min, complete. Springboard certificate dated 11 Sept 2026 (repo-root PDF). Covers n8n automation, agents vs LLMs, prompting, the Calendar agent, RAG/CAG and error handling.
+2. **AI Engineer Agentic Track: The Complete Agent & MCP Course.** 20 h 52 min, complete. Certificate dated 21 Sept 2026. Covers agent loops and tool calling, design patterns, guardrails and evals, LLM-as-judge, the OpenAI Agents SDK (multi-agent orchestration, deep research agent), CrewAI, LangGraph (checkpointers, human-in-the-loop, deep agents), ADK/A2A and other frameworks, and MCP (build servers, agentic RAG, capstone).
+3. **Agentic AI – Private Agentic RAG with LangGraph and Ollama.** About 80% done (progress PNG in the repo root).
+   - Springboard lists 17 h 37 min, so the report counts 14 h 6 min. The Udemy content the user pasted totals 21 h 47 min.
+   - The first 80% of the content covers Ollama and local model selection, LangGraph state machines, a MySQL SQL agent, PageRAG ingestion (Docling, ChromaDB, SHA-256 de-duplication), metadata-filtered retrieval with BM25 re-ranking, agentic RAG, CRAG and Reflexion RAG (the cut-off falls inside Self-RAG).
+4. **Agentic AI for Beginners: Build AI Agents with LangGraph.** About 90% done (progress PNG in the repo root).
+   - Springboard lists 5 h 51 min, so the report counts 5 h 16 min. The Udemy content totals 10 h 5 min.
+   - The first 90% covers agent fundamentals, multi-agent systems, LangGraph agents (state, nodes, graphs), knowledge bases/RAG, tools, testing, multi-tool workflows, and AWS Bedrock agents with knowledge bases and action groups.
+
+The report deliberately uses the Springboard-listed durations, because they match the attached progress screenshots.
 
 ## The implementation: "Veritas" (multi-agent research assistant with verifiable citations)
 - **Problem:** LLM chatbots invent or garble references. In our own benchmark, a single Gemini call gave only 50% of references that exist, and its DOIs pointed to the cited paper only 46% of the time.
@@ -91,8 +93,18 @@ Guardrail red-team cases: 12/12. Planner scope checks: 3/3.
 - The same paper appeared on both arXiv and OpenAlex, so the source registry also de-duplicates by normalised title.
 - Free-tier quota matters: plan-and-execute runs the searches with no model call, then ReAct refines. That keeps a standard run at about 7–10 model calls.
 
-## Report status (`report/CA3_Agentic_AI_Report.docx`)
-- Generated from the template by `report/build_report.py`, which edits the template's XML and keeps its styles, footer and numbering. Re-run it after changing content.
-- Figures are in `report/figures/` (UI screenshots via Playwright plus diagrams).
-- Placeholders are highlighted yellow: Faculty, Division, PRN, the Vercel URL, and the remaining courses in Section 3 and Appendix A.
-- The audience is the faculty evaluators. Write formally, in first person for the reflection.
+## Report status (`report/CA3_Agentic_AI_Report.docx`): complete except two links
+- Generated from the template by `report/build_report.py`. It edits the template's XML and keeps its styles, footer and numbering. Re-run it after any change: `python3 report/build_report.py`.
+- **The user's constraints:**
+  - **Under 1000 words, excluding figure captions.** The builder prints the count; Word's own statistic was 976 words of text plus 232 caption words.
+  - **Black text only.** The builder recolours every colour in the template's styles and footer to black; table shading is grey.
+  - **No highlights.**
+- Cover fields: Division CSE C, Name Faheemuddin Sayyed, PRN 23070122196.
+- Left blank for the user: **Faculty** (name not given), **Prototype/Application link** and **GitHub repository link** (the user will paste them).
+- Figures are in `report/figures/`:
+  - diagrams rendered from `report/figures/src/*.html`;
+  - UI screenshots, with crops in `crops/`;
+  - `fig_tests.png`, generated from `report/evidence/pytest_output.txt`;
+  - certificates `cert_course1.png` / `cert_course2.png` and progress crops `progress_course3.jpg` / `progress_course4.jpg`.
+- 12 pages. Audience: the faculty evaluators.
+- Keep any further edits concise: the word limit is tight (about 25 words of headroom).

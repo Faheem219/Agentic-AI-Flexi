@@ -57,4 +57,4 @@ tests/test_rag.py::test_ingest_and_hybrid_search_ranks_relevant_section_first PA
 tests/test_rag.py::test_retrieval_degrades_to_bm25_without_embeddings PASSED
 tests/test_rag.py::test_index_refreshes_after_delete PASSED
 
-============================== 48 passed in 4.95s ==============================
+============================== 48 passed in 3.41s ==============================

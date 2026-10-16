@@ -40,13 +40,24 @@ def test_health_and_tools():
         assert len(c.get("/api/tools").json()) == 4
 
 
+def _wait_event(client, run_id, event_type, timeout=10):
+    """The run row is marked completed just before the final trace event is written, so wait for it."""
+    end = time.time() + timeout
+    while time.time() < end:
+        events = client.get(f"/api/runs/{run_id}/events").json()
+        if events and events[-1]["type"] == event_type:
+            return events
+        time.sleep(0.05)
+    raise AssertionError(f"no {event_type} event")
+
+
 def test_run_lifecycle_over_http():
     with _client() as c:
         rid = c.post("/api/runs", json={"question": "How should retrieval augmented generation be evaluated?",
                                         "depth": "quick"}).json()["run_id"]
         run = _wait(c, rid)
         assert run["status"] == "completed" and run["references"]
-        events = c.get(f"/api/runs/{rid}/events").json()
+        events = _wait_event(c, rid, "run_finished")
         assert events[0]["type"] == "run_created" and events[-1]["type"] == "run_finished"
         later = c.get(f"/api/runs/{rid}/events", params={"after": events[-3]["id"]}).json()
         assert len(later) == 2
