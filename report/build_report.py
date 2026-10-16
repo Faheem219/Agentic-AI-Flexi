@@ -141,10 +141,10 @@ def field(label: str, value: str) -> str:
     return para(run(f"{label}: ", b=True) + rich(value), after=80)
 
 
-def cell(text: str, width: int, fill=None, sz=18, bold=False) -> str:
+def cell(text: str, width: int, fill=None, sz=18, bold=False, keep=False) -> str:
     shd = f'<w:shd w:val="clear" w:color="auto" w:fill="{fill}"/>' if fill else ""
     paras = "".join(
-        para(rich(line, sz=sz, b=bold), after=0, line=252) for line in str(text).split("\n"))
+        para(rich(line, sz=sz, b=bold), after=0, line=252, keep_next=keep) for line in str(text).split("\n"))
     return f'<w:tc><w:tcPr><w:tcW w:w="{width}" w:type="dxa"/>{shd}</w:tcPr>{paras}</w:tc>'
 
 
@@ -164,10 +164,11 @@ def table(header: list[str], rows: list[list[str]], widths: list[float], caption
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>'
         "</w:tblPr>",
         "<w:tblGrid>" + "".join(f'<w:gridCol w:w="{w}"/>' for w in ws) + "</w:tblGrid>",
-        '<w:tr><w:trPr><w:tblHeader/></w:trPr>' + "".join(cell(h, w, "F2F2F2", sz, True) for h, w in zip(header, ws)) + "</w:tr>",
+        '<w:tr><w:trPr><w:tblHeader/></w:trPr>' + "".join(cell(h, w, "F2F2F2", sz, True, keep=True) for h, w in zip(header, ws)) + "</w:tr>",
     ]
-    for row in rows:
-        tbl.append("<w:tr><w:trPr><w:cantSplit/></w:trPr>" + "".join(cell(c, w, None, sz) for c, w in zip(row, ws)) + "</w:tr>")
+    for ri, row in enumerate(rows):
+        keep = ri < len(rows) - 1
+        tbl.append("<w:tr><w:trPr><w:cantSplit/></w:trPr>" + "".join(cell(c, w, None, sz, keep=keep) for c, w in zip(row, ws)) + "</w:tr>")
     tbl.append("</w:tbl>")
     out = ""
     if caption:
@@ -256,6 +257,7 @@ def _pool(system: str, key: str) -> int:
 
 VT, VV = _pool("veritas", "total"), _pool("veritas", "verified")
 BT, BV = _pool("baseline", "total"), _pool("baseline", "verified")
+BN, BP = _pool("baseline", "not_found"), _pool("baseline", "partial")
 B_DOI_G, B_DOI_C = _pool("baseline", "dois_given"), _pool("baseline", "doi_correct")
 V_DOI_G, V_DOI_C = _pool("veritas", "dois_given"), _pool("veritas", "doi_correct")
 pc = lambda a, b: f"{round(100 * a / b)}%" if b else "n/a"  # noqa: E731
@@ -280,6 +282,14 @@ TOTAL_TXT = f"{TOTAL_MIN // 60} h {TOTAL_MIN % 60} min"
 
 
 # ------------------------------------------------------------------ content
+COURSE_LEARNING = [
+    "n8n workflows and agents, structured prompting, error handling, a calendar agent, RAG and CAG.",
+    "agent loops, design patterns, guardrails, LLM-as-judge, Agents SDK, CrewAI, LangGraph and MCP servers.",
+    "(first 80%) Ollama, LangGraph, a SQL agent, ChromaDB ingestion, BM25 re-ranking, corrective and reflexion RAG.",
+    "(first 90%) agent fundamentals, multi-agent systems, LangGraph agents with knowledge bases and tools, Bedrock agents.",
+]
+
+
 def build_body() -> str:
     x: list[str] = []
     a = x.append
@@ -298,31 +308,40 @@ def build_body() -> str:
     # ---------------- 1
     a(H1("1. Introduction to Agentic AI"))
     a(H2("Objective"))
-    a(P("To learn agentic AI through four courses (C1–C4, Section 3) and apply it by building, testing and deploying **Veritas**, a multi-agent research assistant with verifiable citations."))
+    a(P("This report documents what I learnt in four agentic-AI courses (C1–C4, Section 3) and how I applied it to design, build, test and deploy **Veritas**, a multi-agent research assistant whose citations can be verified. The aims were to understand agents, apply them to a measurable problem and evaluate the result."))
     a(H2("Key Concepts Understood"))
-    a(bullets([
-        "Agents vs. workflows: code where the path is known, an LLM loop only where judgement is needed (C1, C2, C4).",
-        "Tool calling, agent loops, structured outputs (C2, C4).",
-        "Patterns: chaining, routing, parallelisation, orchestrator–workers, evaluator–optimizer (C2).",
-        "LangGraph state, nodes, reducers, checkpointers, human-in-the-loop (C2–C4).",
-        "MCP hosts, clients and servers (C2).",
-        "RAG, BM25 re-ranking, CAG, corrective and reflexion RAG (C1, C3).",
-        "Guardrails, LLM-as-judge evaluation, tracing, fallbacks (C1, C2).",
-    ]))
+    a(table(
+        ["Concept", "Course", "Used in Veritas"],
+        [
+            ["Agents vs. workflows", "C1, C2, C4", "Code for exact checks; LLMs only where judgement is needed"],
+            ["Tool calling, agent loop", "C2, C4", "Researchers search until evidence suffices"],
+            ["Structured outputs", "C1, C2", "Schema-validated JSON from agents"],
+            ["Design patterns", "C2", "Routing, parallel fan-out, evaluator–optimizer loop"],
+            ["LangGraph state and checkpointers", "C2–C4", "Workflow graph; interrupt and resume for plan review"],
+            ["Model Context Protocol", "C2", "Search tools run in a separate MCP server"],
+            ["RAG, re-ranking, CAG", "C1, C3", "Hybrid library search; CAG follow-up chat"],
+            ["Corrective / reflexion RAG", "C3", "Critic returns weak drafts for revision"],
+            ["Guardrails, evaluation", "C1, C2", "Injection screening, LLM-as-judge benchmark"],
+            ["Reliability", "C1, C2", "Retries, model fallback, cool-downs, caching"],
+        ],
+        [1.7, 0.9, 3.4], caption="Key concepts, their source course and their use in the project"))
 
     # ---------------- 2
     a(H1("2. Understanding of Agentic AI"))
     a(H2("What is an AI Agent?"))
-    a(P("An AI agent is an LLM pursuing a goal in a loop (reason, call a tool, observe, decide) using instructions, tools and memory. Unlike a single LLM call it uses live data and self-corrects; unlike a fixed workflow it adapts at run time. Agents can hallucinate, loop or be hijacked, so they need guardrails, limits, oversight and evaluation."))
+    a(P("An AI agent is an LLM pursuing a goal in a loop: reason, call a tool, observe the result, decide the next step (the ReAct pattern). It combines a model, instructions, tools and memory, with control code enforcing limits."))
+    a(P("A single LLM call cannot use live data or check itself; a fixed workflow cannot adapt. Agents do both at the cost of predictability, so workflows should be used where the path is known."))
+    a(P("Multi-agent systems divide work among specialised agents through chaining, routing, parallelisation, orchestrator–workers and evaluator–optimizer patterns. Agents can hallucinate, loop or be hijacked by prompt injection, so they need guardrails, bounded loops, human checkpoints and evaluation."))
 
     # ---------------- 3
     a(H1("3. Courses Completed (multiple courses as applicable)"))
     a(H2("Course Details"))
-    for title, dur, _, ev in COURSES:
+    for (title, dur, _, ev), learn in zip(COURSES, COURSE_LEARNING):
         a(para(run("Course Title: ", b=True) + rich(title), style="ListParagraph", num=10, after=40))
         a(field("Platform / Provider", "Infosys Springboard (Udemy)"))
         a(field("Course Duration (minimum 45 hours)", dur))
         a(field("Completion Evidence", ev))
+        a(field("Key Learning", learn[0].upper() + learn[1:] if not learn.startswith("(") else learn))
     a(P(f"**Total:** {TOTAL_TXT}."))
 
     # ---------------- 4
@@ -330,27 +349,61 @@ def build_body() -> str:
     a(H2("Problem Statement"))
     a(para(run("Problem Statement: ", b=True) + rich(
         f"Chatbots used for literature reviews invent references: Walters and Wilder (2023) found 55% of GPT-3.5 and 18% of GPT-4 citations fabricated, and in my benchmark only {pc(BV, BT)} of a current Gemini model's references existed. Checking them costs students hours. Goal: an agentic system that researches any question in real scholarly databases and returns a brief where every claim cites a retrieved publication, transparently, with human oversight, on free-tier infrastructure."), after=140))
+    a(H3("Why an agentic solution"))
+    a(P("A single call cannot query databases or verify citations, and a fixed pipeline cannot decide what to search for varied questions. The task needs agents that plan, search, judge and revise, inside deterministic safeguards that guarantee citation integrity."))
+    a(H3("Scope and success criteria"))
+    a(P("Scope: research questions in any field, answered from scholarly metadata, abstracts and the user's documents; constraints: free-tier Gemini and public APIs."))
+    a(table(
+        ["Criterion", "Target", "Result (Section 7)"],
+        [
+            ["References that exist", "≥ 95%", pc(VV, VT)],
+            ["Sentences carrying a citation", "≥ 75%", f"{round(V['avg_citation_coverage'] * 100)}%"],
+            ["Attacks and invalid inputs handled", "All cases", f"{GR['passed'] + SC['passed']}/{GR['total'] + SC['total']}"],
+            ["Time per standard brief", "< 2 min", f"{V['avg_latency_s']:.0f} s"],
+            ["Model calls per run (free tier)", "≤ 15", f"{V['avg_llm_calls']:.1f}"],
+            ["Human oversight", "Plan review and trace", "Implemented"],
+        ],
+        [2.6, 1.6, 1.6], caption="Success criteria"))
 
     # ---------------- 5
     a(H1("5. Proposed Solution"))
     a(H2("Project Title"))
     a(P("Veritas: a multi-agent research assistant with verifiable citations"))
     a(H2("Project Description"))
-    a(P("Agents plan, search OpenAlex, arXiv, Wikipedia and the user's documents, write a brief and critique it. The model never writes references: agents cite only IDs of retrieved records, code removes unknown IDs, and references are built from database metadata."))
+    a(P("Agents plan, search OpenAlex, arXiv, Wikipedia and the user's documents, write a brief and critique it. The model never writes references: agents cite only IDs of retrieved records, code removes unknown IDs, and references are built from database metadata. Users can review the plan, add their own documents, watch agents live and ask follow-up questions."))
     a(H2("Agent Workflow"))
     a(figure(FIG / "fig_workflow.png", "Agent workflow (LangGraph). Rounded boxes are LLM agents, square boxes deterministic code, the dashed box the optional human checkpoint; red arrows are early exits and the reflection loop.", 6.3, border=False))
-    a(numbered([
-        "**Guardrail** (code): blocks prompt injection, redacts personal data.",
-        "**Memory:** recalls similar past runs.",
-        "**Planner** (LLM): checks scope, splits the question, routes parts to tools.",
-        "**Plan review** (human, optional): edit, approve or reject.",
-        "**Researchers** (LLM, parallel): search, then refine via MCP tools.",
-        "**Writer** (LLM): cited brief from findings only.",
-        "**Verifier** (code): removes invalid citations, measures coverage.",
-        "**Critic** (LLM): scores the draft; code returns it if a score is below 7 or coverage below 75%.",
-        "**Publisher** (code): builds references from metadata.",
+    a(table(
+        ["Component", "Type", "Responsibility", "Why a separate role"],
+        [
+            ["Guardrail", "Code", "Blocks injection, redacts personal data", "Cheap, auditable"],
+            ["Memory", "Embeddings", "Recalls similar past runs", "Builds on earlier work"],
+            ["Planner", "LLM (smart)", "Checks scope, writes sub-questions, routes them to tools", "Quality drives later steps"],
+            ["Plan review", "Human", "Edit, approve or reject the plan", "Oversight before any cost is spent"],
+            ["Researchers", "LLM (fast), parallel", "Search via MCP, then refine; findings tied to source IDs", "Focused contexts; parallel speed"],
+            ["Writer", "LLM (smart)", "Cited brief from findings only", "One consistent voice"],
+            ["Verifier", "Code", "Removes invalid citations, measures coverage", "Exact checks belong in code"],
+            ["Critic", "LLM (smart)", "Scores coverage, groundedness, clarity, balance", "Independent evaluator"],
+            ["Publisher", "Code", "Builds references from metadata", "References can never be invented"],
+        ],
+        [1.0, 1.0, 2.2, 2.0], caption="Agent and tool roles", sz=17))
+    a(table(
+        ["MCP tool", "Source", "Purpose"],
+        [
+            ["search_openalex", "OpenAlex (Crossref fallback)", "Peer-reviewed papers in any field"],
+            ["search_arxiv", "arXiv", "Recent preprints"],
+            ["search_wikipedia", "Wikipedia", "Background only"],
+            ["search_knowledge_base", "User's documents", "Hybrid RAG, cited by page"],
+        ],
+        [1.6, 1.8, 2.4], caption="Tools exposed by the MCP server"))
+    a(H3("Design decisions"))
+    a(bullets([
+        "**Plan-and-execute, then ReAct:** planned queries run without a model call; the model only decides whether to search again, keeping runs to about eight calls.",
+        "**Two model tiers with fallback:** stronger model for planning, writing and critique; faster model for research.",
+        "**Code-based acceptance rule:** revise if any score is below 7, a serious issue exists or coverage is below 75%.",
+        "**MCP for tools:** tools are decoupled from agents and reusable by any MCP host.",
+        "**RAG for the library, CAG for follow-ups:** the library grows, while one brief fits entirely in context.",
     ]))
-    a(P("Exact checks are code, judgement is LLM; parallelism cuts latency."))
 
     # ---------------- 6
     a(H1("6. Implementation"))
@@ -361,17 +414,18 @@ def build_body() -> str:
     a(field("Tools / APIs", "OpenAlex, arXiv, Wikipedia, Crossref; hybrid BM25 + embedding search"))
     a(field("Database / Storage", "SQLite"))
     a(field("Frontend", "React + Vite on Vercel"))
-    a(field("Backend", "FastAPI on a VM behind Nginx (HTTPS)"))
+    a(field("Backend", "FastAPI with Server-Sent Events on a VM behind Nginx (HTTPS); pytest"))
     a(figure(FIG / "fig_architecture.png", "Deployment architecture: React app on Vercel; FastAPI, the LangGraph workflow and the MCP tool server on a VM behind Nginx.", 6.2, border=False))
     a(H2("Implementation Steps"))
     a(numbered([
-        "Probed available Gemini models and SDK versions.",
-        "Wrapped the scholarly APIs as tools in an MCP server.",
-        "Built a Gemini gateway with fallbacks, cool-downs, retries and caching.",
-        "Added library RAG: chunking, embeddings, BM25 and rank fusion.",
-        "Implemented the LangGraph workflow, guardrails and citation verifier.",
-        "Added FastAPI with live event streaming, and the React interface.",
-        f"Wrote {N_TESTS} tests and a benchmark, then deployed.",
+        "**Platform probing:** tested which Gemini models the key could use, function calling and JSON output, and the MCP and LangGraph APIs.",
+        "**Tools and MCP server:** API clients normalise results into one source format, with rate limiting, caching and a Crossref fallback, exposed as four MCP tools.",
+        "**LLM gateway:** fallback chain, cool-downs, retries, response cache and token accounting.",
+        "**Library RAG:** page-aware chunking with overlap, title-prefixed chunks, Gemini embeddings, and BM25 and cosine rankings fused by reciprocal rank.",
+        "**Agent workflow:** typed state, a de-duplicating source registry, role prompts with JSON schemas, fan-out, interrupt/resume and a bounded reflection loop.",
+        "**Safety:** regex guardrails, PII redaction and the citation verifier.",
+        "**API and interface:** FastAPI with background runs, live streaming and rate limiting; a React interface.",
+        f"**Testing and deployment:** {N_TESTS} tests and a benchmark; a start script on the VM and Vercel for the frontend.",
     ]))
 
     # ---------------- 7
@@ -389,24 +443,59 @@ def build_body() -> str:
     shot("ui_chat_cag.jpg", "Follow-up questions use cache-augmented generation over the brief and its abstracts.", 4.8)
     shot("ui_guardrail_block.jpg", "A prompt-injection attempt blocked before any model call (0 model calls, 0 tokens).", 6.0)
     a(H2("Testing and Evidence"))
+    a(P(f"Testing covered automated tests, live runs, a benchmark and red-team cases. All {N_TESTS} automated tests run offline with a scripted LLM and pass (Table 5, Figure 10)."))
+    a(table(
+        ["Area", "Tests", "What is verified"],
+        [
+            ["Guardrails", "13", "Attacks blocked; benign questions mentioning “instructions” allowed; PII redacted"],
+            ["RAG", "5", "Chunking, hybrid ranking, BM25-only fallback, index refresh"],
+            ["Citations and parsers", "9", "Invalid IDs removed, coverage, renumbering, API parsers, Crossref fallback"],
+            ["LLM gateway", "5", "Fallback on 429, retry on 503, cache hit"],
+            ["Workflow", "8", "Reflection loop, rejections, plan edit and resume, graceful degradation, parallelism"],
+            ["API and MCP", "8", "Run lifecycle, live stream, library, access code, MCP tools"],
+        ],
+        [1.4, 0.5, 4.2], caption="Automated test suite", sz=17))
+    a(figure(FIG / "fig_tests.png", f"Automated test output ({N_TESTS} passed).", 5.4, max_h_in=5.0))
+    a(P(f"**Benchmark.** {len(QS)} questions from {len(QS)} fields were answered by Veritas and by one call to the same Gemini model. Every reference was checked in code against Crossref, OpenAlex and arXiv, and a blind LLM judge scored both answers (Table 6, Figure 11)."))
+    a(table(
+        ["Measure", "Veritas", "Single call"],
+        [
+            ["References that exist", pc(VV, VT), pc(BV, BT)],
+            ["References not found anywhere", "0%", pc(BN, BT)],
+            ["DOIs pointing to the cited paper", pc(V_DOI_C, V_DOI_G), pc(B_DOI_C, B_DOI_G)],
+            ["Judge preference", f"{S['judge_wins']['veritas']} of {len(QS)}", f"{S['judge_wins']['baseline']} of {len(QS)}"],
+            ["Time per answer", f"{V['avg_latency_s']:.0f} s", f"{BL['avg_latency_s']:.0f} s"],
+            ["Tokens per answer", f"{V['avg_tokens']:,.0f}", f"{BL['avg_tokens']:,.0f}"],
+        ],
+        [2.8, 1.5, 1.5], caption="Benchmark results"))
+    a(figure(FIG / "crops" / "ui_evals_top.jpg", "Evaluation page: headline comparison, cost of the extra rigour and per-question results.", 6.2, max_h_in=5.0))
+    a(P("**Observed behaviour in live runs:**", after=60))
     a(bullets([
-        f"**Automated tests:** {N_TESTS} offline tests covering guardrails, RAG, citations, fallbacks, workflow, API and MCP pass (Figure 10).",
-        f"**Benchmark** ({len(QS)} questions vs. one call to the same model; Figure 11): existing references {pc(VV, VT)} vs. {pc(BV, BT)}; correct DOIs {pc(V_DOI_C, V_DOI_G)} vs. {pc(B_DOI_C, B_DOI_G)}; blind judge preferred Veritas {S['judge_wins']['veritas']}/{len(QS)}; {V['avg_latency_s']:.0f} s vs. {BL['avg_latency_s']:.0f} s per answer.",
-        f"**Red-team:** {GR['passed']}/{GR['total']} guardrail and {SC['passed']}/{SC['total']} scope cases correct.",
-        "**Interpretation:** when quotas forced both systems onto a lighter model, the baseline's accuracy fell but Veritas stayed at 100%: integrity comes from the architecture.",
+        "A 503 from the primary model was absorbed by the fallback chain and the run completed.",
+        "When the stronger model's daily quota ran out, runs continued on a lighter model.",
+        "On the first live run, revision raised citation coverage from 50% to 95%.",
+        "When OpenAlex's free budget ran out, researchers used other tools; a Crossref fallback was added.",
+        f"Red-team: {GR['passed']}/{GR['total']} guardrail and {SC['passed']}/{SC['total']} scope cases were correct, with injections blocked at zero model calls.",
     ]))
-    a(figure(FIG / "fig_tests.png", f"Automated test output ({N_TESTS} passed).", 5.4, max_h_in=7.6))
-    a(figure(FIG / "crops" / "ui_evals_top.jpg", "Evaluation page: headline comparison, cost of the extra rigour and per-question results.", 6.2, max_h_in=7.6))
+    a(P("**Interpretation.** On the lighter model the baseline's accuracy fell while Veritas stayed at 100%: integrity comes from the architecture. **Limitations:** a small sample; verification proves existence, not support; the judge shares a model family with both systems."))
 
     # ---------------- 8
     a(H1("8. Conclusion"))
-    a(P(f"Veritas met its targets: every reference verifiable, {round(V['avg_citation_coverage'] * 100)}% of sentences cited and all attacks blocked, at higher latency and token cost."))
+    a(P(f"Veritas met every success criterion: all references were real, {round(V['avg_citation_coverage'] * 100)}% of sentences were cited and every attack was blocked, while a standard brief took about a minute on free-tier services. The cost is roughly {V['avg_latency_s'] / BL['avg_latency_s']:.0f} times the latency and {V['avg_tokens'] / BL['avg_tokens']:.0f} times the tokens of a single call, which is acceptable where trust matters."))
     a(H2("Individual Reflection"))
-    a(P("Courses 1 and 4 taught agents in n8n and AWS Bedrock; rebuilding them in code showed that most of an agentic system is ordinary engineering: only four of nine steps call an LLM. Course 2's deep-research and MCP projects shaped the planner–researcher–writer design; Course 3's corrective and reflexion RAG inspired the critic loop. Two observations changed the design: the critic once said “revise” despite scores of 8 and above, so the decision moved into code; and quota errors outnumbered bugs, so fallbacks mattered most."))
+    a(P("Courses 1 and 4 taught agents inside n8n and AWS Bedrock. Rebuilding them in code showed me that most of an agentic system is ordinary engineering: only four of nine steps call an LLM, and choosing those steps was the key design decision. Course 2's deep-research and MCP projects shaped the planner–researcher–writer design and tool server; Course 3's corrective and reflexion RAG inspired the critic loop and BM25 re-ranking."))
+    a(P("Observations changed the design. The critic once said “revise” while scoring everything 8 or higher, so the decision moved into code. Every benchmark draft was revised once because the writer leaves summary sentences uncited; two extra calls raised coverage by about 30 points. The stronger model gave real references until its quota ran out, so guarantees must come from architecture, not model choice. Quota errors outnumbered bugs, making Course 1's layered error handling the most valuable lesson."))
+    a(H2("Limitations and Future Work"))
+    a(bullets([
+        "Use open-access full texts and entailment checks to verify that each source supports its claim.",
+        "Persist graph checkpoints so plan reviews survive server restarts.",
+        "Run a larger evaluation with human expert ratings.",
+    ]))
 
     # ---------------- references + appendix
     a(H1("References"))
     a(P("Walters, W. H., & Wilder, E. I. (2023). Fabrication and errors in the bibliographic citations generated by ChatGPT. __Scientific Reports, 13__, 14045."))
+    a(P("Yao, S., Zhao, J., Yu, D., et al. (2023). ReAct: Synergizing reasoning and acting in language models. __ICLR 2023__."))
     a(H1("Appendix A: Certificates and Progress"))
     a(figure(FIG / "cert_course1.png", "Course 1 completion certificate.", 5.6, max_h_in=4.0))
     a(figure(FIG / "cert_course2.png", "Course 2 completion certificate.", 5.6, max_h_in=4.0))

@@ -96,7 +96,7 @@ Guardrail red-team cases: 12/12. Planner scope checks: 3/3.
 ## Report status (`report/CA3_Agentic_AI_Report.docx`): complete except two links
 - Generated from the template by `report/build_report.py`. It edits the template's XML and keeps its styles, footer and numbering. Re-run it after any change: `python3 report/build_report.py`.
 - **The user's constraints:**
-  - **Under 1000 words, excluding figure captions.** The builder prints the count; Word's own statistic was 976 words of text plus 232 caption words.
+  - **At most 2000 words, excluding captions.** The user raised the limit from 1000. The builder prints the count; Word's own statistic is 1887 words of text plus 272 caption words.
   - **Black text only.** The builder recolours every colour in the template's styles and footer to black; table shading is grey.
   - **No highlights.**
 - Cover fields: Division CSE C, Name Faheemuddin Sayyed, PRN 23070122196.
@@ -106,5 +106,5 @@ Guardrail red-team cases: 12/12. Planner scope checks: 3/3.
   - UI screenshots, with crops in `crops/`;
   - `fig_tests.png`, generated from `report/evidence/pytest_output.txt`;
   - certificates `cert_course1.png` / `cert_course2.png` and progress crops `progress_course3.jpg` / `progress_course4.jpg`.
-- 12 pages. Audience: the faculty evaluators.
-- Keep any further edits concise: the word limit is tight (about 25 words of headroom).
+- 15 pages. Audience: the faculty evaluators.
+- The report has 6 compact tables and 15 figures. Keep any edits within the 2000-word limit (about 110 words of headroom).
