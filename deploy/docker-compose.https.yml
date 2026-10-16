@@ -1,0 +1,25 @@
+# Optional: serve the API over HTTPS with automatic Let's Encrypt certificates (needs a domain
+# whose DNS A record points at the VM, and ports 80/443 open).
+# Usage (from the repo root on the VM):
+#   DOMAIN=api.example.com docker compose -f backend/docker-compose.yml -f deploy/docker-compose.https.yml up -d --build
+services:
+  veritas-api:
+    ports: !reset []
+    expose:
+      - "8000"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - veritas-api
+
+volumes:
+  caddy-data:

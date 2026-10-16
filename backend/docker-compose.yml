@@ -1,0 +1,17 @@
+# Usage on the VM:  cp .env.example .env  (fill in GEMINI_API_KEY, CORS_ORIGINS)  then
+#                   docker compose up -d --build
+services:
+  veritas-api:
+    build: .
+    container_name: veritas-api
+    env_file: .env
+    environment:
+      DATA_DIR: /app/data
+    volumes:
+      - veritas-data:/app/data   # runs, traces, knowledge base, memory survive restarts
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  veritas-data:
